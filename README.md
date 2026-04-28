@@ -26,10 +26,10 @@ cd my_proteins/
 # 3. Run — it'll ask for your API key on first use and save it
 msa-nim run
 
-# Done. Results are in msa_results/
+# Done. A3M files are in msa_results/
 ```
 
-That's it. First run prompts for your [NVIDIA NIM API key](https://build.nvidia.com/colabfold/msa-search) (free) and saves it to `.msa-nim.env`. No need to set any env vars.
+First run prompts for your [NVIDIA NIM API key](https://build.nvidia.com/colabfold/msa-search) (free) and saves it to `.msa-nim.env` for future runs. Same MSA engine as ColabFold — just without the 1.4 TB database download.
 
 ## From a PDB ID
 
@@ -47,8 +47,11 @@ msa-nim pdb 7DKF 6HBB 1ABC    # multiple IDs
 msa-nim run /path/to/fastas       # custom input directory
 msa-nim run -o my_output          # custom output directory
 msa-nim run --resume               # retry crashed/interrupted run
+msa-nim run -j 2                   # parallel jobs (paid API tier only)
 msa-nim run --db PDB70_220313      # add structural templates
 ```
+
+> **Note:** The free NVIDIA tier rate-limits to ~1 request at a time. Use `-j 1` (default) on free tier; `-j 2+` only helps on paid plans.
 
 ## FASTA format
 
@@ -73,6 +76,7 @@ MVHLTPEEKSAVTALWGKVNVDEVGGEALGRLLVVYPWTQR...
 | `No .fasta files found` | Use `.fasta`, `.fa`, or `.faa` extensions |
 | `422: Database not available` | Check spelling: `Uniref30_2302`, `colabfold_envdb_202108`, `PDB70_220313` |
 | Interrupted run | Re-run with `--resume` |
+| Rate limiting (429) | Free tier is ~1 req/sec; use default `-j 1` |
 
 ## License
 

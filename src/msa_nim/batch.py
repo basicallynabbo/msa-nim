@@ -2,7 +2,8 @@
 
 from __future__ import annotations
 
-import json
+import threading
+from concurrent.futures import ThreadPoolExecutor, as_completed
 from pathlib import Path
 
 from art import text2art
@@ -45,11 +46,7 @@ def _write_a3m(out_dir: Path, base_name: str, db_name: str, a3m_text: str) -> Pa
     return path
 
 
-def _write_raw_json(out_dir: Path, base_name: str, data: dict) -> Path:
-    path = out_dir / f"{base_name}_raw.json"
-    with open(path, "w") as f:
-        json.dump(data, f, indent=2)
-    return path
+
 
 
 def _count_sequences(a3m_text: str) -> int:
@@ -103,36 +100,49 @@ class BatchRunner:
                 return
 
         _print_banner(self.databases, self.out_dir, len(jobs))
+        if self.max_workers > 1:
+            print(f"    Workers:    {self.max_workers}")
+        print()
 
         failed_keys = []
+        completed = 0
+        lock = threading.Lock()
+
+        def _process_job(job):
+            try:
+                result = self.client.search_monomer(
+                    job["sequence"], databases=self.databases
+                )
+                self._save_result(job["base_name"], result)
+                self.tracker.mark_done(job["key"])
+                return True
+            except Exception as exc:
+                self.tracker.mark_failed(job["key"])
+                return (job["key"], str(exc))
 
         try:
-            for i, job in enumerate(jobs):
-                frame = POKEMON_FRAMES[i % len(POKEMON_FRAMES)]
-                pct = int((i / len(jobs)) * 100)
-                bar_filled = int(30 * (i / len(jobs)))
-                bar_empty = 30 - bar_filled
-                bar = "\u2588" * bar_filled + "\u2591" * bar_empty
-
-                print(
-                    f"\r{frame} [{bar}] {pct:3d}% ({i}/{len(jobs)})",
-                    end="", flush=True,
-                )
-                try:
-                    result = self.client.search_monomer(
-                        job["sequence"], databases=self.databases
-                    )
-                    self._save_result(job["base_name"], result)
-                    self.tracker.mark_done(job["key"])
-                except Exception as exc:
-                    self.tracker.mark_failed(job["key"])
-                    failed_keys.append((job["key"], str(exc)))
+            workers = min(self.max_workers, len(jobs))
+            with ThreadPoolExecutor(max_workers=workers) as pool:
+                futures = {pool.submit(_process_job, job): i for i, job in enumerate(jobs)}
+                for future in as_completed(futures):
+                    result = future.result()
+                    with lock:
+                        completed += 1
+                        pct = int((completed / len(jobs)) * 100)
+                        bar_filled = int(30 * (completed / len(jobs)))
+                        bar_empty = 30 - bar_filled
+                        bar = "\u2588" * bar_filled + "\u2591" * bar_empty
+                        frame = POKEMON_FRAMES[completed % len(POKEMON_FRAMES)]
+                        print(
+                            f"\r{frame} [{bar}] {pct:3d}% ({completed}/{len(jobs)})",
+                            end="", flush=True,
+                        )
+                        if result is not True:
+                            failed_keys.append(result)
 
             bar = "\u2588" * 30
             frame = POKEMON_FRAMES[-1]
-            print(
-                f"\r{frame} [{bar}] 100% ({len(jobs)}/{len(jobs)})"
-            )
+            print(f"\r{frame} [{bar}] 100% ({len(jobs)}/{len(jobs)})")
         except KeyboardInterrupt:
             print("\n\n  Interrupted! Progress saved. Re-run with --resume to continue.")
             self._print_summary(total)
@@ -201,5 +211,4 @@ class BatchRunner:
             n_seqs = _count_sequences(a3m_text)
             print(f"\n    \u2713 {path.name} ({n_seqs} seqs)")
 
-        if result.raw:
-            _write_raw_json(self.out_dir, base, result.raw)
+        
