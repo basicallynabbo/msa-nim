@@ -38,16 +38,6 @@ def _sanitize_id(name: str) -> str:
     return "".join(c if c.isalnum() or c in "_-" else "_" for c in name)
 
 
-def _write_a3m(out_dir: Path, base_name: str, db_name: str, a3m_text: str) -> Path:
-    safe_db = _sanitize_id(db_name)
-    path = out_dir / f"{base_name}_{safe_db}.a3m"
-    with open(path, "w") as f:
-        f.write(a3m_text)
-    return path
-
-
-
-
 
 def _count_sequences(a3m_text: str) -> int:
     return sum(1 for line in a3m_text.splitlines() if line.startswith(">"))
@@ -113,7 +103,7 @@ class BatchRunner:
                 result = self.client.search_monomer(
                     job["sequence"], databases=self.databases
                 )
-                self._save_result(job["base_name"], result)
+                self._save_result(job["base_name"], result, databases=self.databases)
                 self.tracker.mark_done(job["key"])
                 return True
             except Exception as exc:
@@ -205,10 +195,44 @@ class BatchRunner:
                 })
         return jobs
 
-    def _save_result(self, base: str, result):
-        for db_name, a3m_text in result.alignments.items():
-            path = _write_a3m(self.out_dir, base, db_name, a3m_text)
-            n_seqs = _count_sequences(a3m_text)
-            print(f"\n    \u2713 {path.name} ({n_seqs} seqs)")
+    def _save_result(self, base: str, result, databases: list[str] | None = None):
+        databases = databases or DEFAULT_MSA_DATABASES
+        combined_lines: list[str] = []
+        query_seen = False
+
+        for db_name in databases:
+            a3m_text = result.alignments.get(db_name, "")
+            if not a3m_text:
+                continue
+
+            lines = a3m_text.strip().splitlines()
+            if not lines:
+                continue
+
+            if query_seen:
+                # Skip the first sequence (query header + sequence) from subsequent databases
+                idx = 0
+                while idx < len(lines) and not lines[idx].startswith(">"):
+                    idx += 1
+                if idx < len(lines) and lines[idx].startswith(">"):
+                    idx += 1
+                    while idx < len(lines) and not lines[idx].startswith(">"):
+                        idx += 1
+                    lines = lines[idx:]
+
+            if lines:
+                if not query_seen and lines[0].startswith(">"):
+                    query_seen = True
+                combined_lines.extend(lines)
+
+        if not combined_lines:
+            return
+
+        a3m_text = "\n".join(combined_lines) + "\n"
+        path = self.out_dir / f"{base}.a3m"
+        with open(path, "w") as f:
+            f.write(a3m_text)
+        n_seqs = sum(1 for line in a3m_text.splitlines() if line.startswith(">"))
+        print(f"\n    \u2713 {path.name} ({n_seqs} seqs)")
 
         

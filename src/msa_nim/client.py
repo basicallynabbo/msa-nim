@@ -88,9 +88,12 @@ class NimClient:
         }
         data = self._post_with_retry(CLOUD_ENDPOINT, payload)
         alignments = self._extract_alignments(data)
+        # The API sometimes returns extra keys (e.g. "colabfold") that we didn't request.
+        # Keep only the databases we actually asked for.
+        result = {k: v for k, v in alignments.items() if k in databases}
         return MsaResult(
             job_id="monomer",
-            alignments=alignments,
+            alignments=result,
             raw=data,
         )
 

@@ -67,7 +67,7 @@ MVHLTPEEKSAVTALWGKVNVDEVGGEALGRLLVVYPWTQR...
 
 ## Output
 
-`msa_results/` contains `{name}_{db}.a3m` files — ready for AlphaFold, ColabFold, or OpenFold.
+`msa_results/` contains one `{name}.a3m` file per query — the combined UniRef + environmental MSA, ready for AlphaFold, ColabFold, or OpenFold.
 
 ## Troubleshooting
 
