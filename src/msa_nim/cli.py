@@ -189,7 +189,7 @@ def pdb(
 
 @cli.command()
 def init():
-    """Create a local .msa-nim.env template."""
+    """Create a .msa-nim.env template with your NVIDIA NIM API key."""
     env_path = Path(".msa-nim.env")
     if env_path.exists():
         click.echo(".msa-nim.env already exists.")
