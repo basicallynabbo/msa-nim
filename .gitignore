@@ -47,3 +47,9 @@ msa_results/
 
 # Secrets
 .msa-nim.env
+dist/
+build/
+*.egg-info/
+__pycache__/
+.msa-nim-progress.json
+.msa-nim.env
