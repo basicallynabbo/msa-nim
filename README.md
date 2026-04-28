@@ -6,6 +6,7 @@
 
 <p align="center">
   <b>Zero-hassle A3M generation with NVIDIA NIM + MMseqs2-GPU</b><br>
+  <a href="https://pypi.org/project/msa-nim/"><img src="https://img.shields.io/pypi/v/msa-nim.svg" alt="PyPI"></a>
   <a href="https://build.nvidia.com/colabfold/msa-search">Get API Key</a> &bull;
   <a href="#quick-start">Quick Start</a> &bull;
   <a href="#usage">Usage</a> &bull;
@@ -36,11 +37,12 @@ Drop your `.fasta` files into a folder, run one command, and get `.a3m` files re
 ## Installation
 
 ```bash
-# Clone
-git clone https://github.com/nabbo/msa-nim.git
-cd msa-nim
+# From PyPI (recommended)
+pip install msa-nim
 
-# Install
+# Or from source
+git clone https://github.com/basicallynabbo/msa-nim.git
+cd msa-nim
 pip install -e .
 
 # Verify
