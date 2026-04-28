@@ -48,18 +48,24 @@ def resolve_api_key() -> str:
     if key:
         return key
 
-    # 4. Interactive prompt
+    # 4. Interactive prompt (saves to .msa-nim.env for future use)
     if sys.stdin.isatty():
-        print("NVIDIA NIM API key not found.")
+        print("\nNVIDIA NIM API key not found.")
         print("Get your free key at: https://build.nvidia.com/colabfold/msa-search")
-        key = input("Enter your NIM_API_KEY: ").strip()
+        key = input("Paste your NIM_API_KEY: ").strip()
         if key:
+            LOCAL_ENV.write_text(
+                "# NVIDIA NIM API key (auto-saved by msa-nim)\n"
+                "# Get your free key at: https://build.nvidia.com/colabfold/msa-search\n"
+                f"NIM_API_KEY={key}\n"
+            )
+            print(f"Saved to {LOCAL_ENV.resolve()}")
             return key
 
     raise RuntimeError(
         "NIM_API_KEY is required. Set it via:\n"
         "  export NIM_API_KEY=nvapi-...\n"
         "  echo 'NIM_API_KEY=nvapi-...' > .msa-nim.env\n"
-        "  echo 'NIM_API_KEY=nvapi-...' > ~/.config/msa-nim/config\n"
+        "Or run `msa-nim run` in a terminal to be prompted interactively.\n"
         "Get your key at: https://build.nvidia.com/colabfold/msa-search"
     )
